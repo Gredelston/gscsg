@@ -16,7 +16,7 @@ func init() {
 }
 
 func fpExists(fp string) bool {
-	_, err := os.Stat(outputDir)
+	_, err := os.Stat(fp)
 	return !os.IsNotExist(err)
 }
 
@@ -29,7 +29,15 @@ func main() {
 		panic(err)
 	}
 	if !fpExists(outputDir) {
-		panic(fmt.Errorf("output directory not found: %s", outputDir))
+		parentDir := filepath.Dir(outputDir)
+		if !fpExists(parentDir) {
+			panic(fmt.Errorf("could not find parent directory %s of specified output directory %s", parentDir, outputDir))
+		} else {
+			err = os.Mkdir(outputDir, os.ModePerm)
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 	const fileBasename = "index.html"
 	fp := filepath.Join(outputDir, fileBasename)
