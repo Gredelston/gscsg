@@ -5,28 +5,34 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
-
-	"github.com/cbroglie/mustache"
 )
 
+// Subdirs for the expected project structure
+const templatesDirName = "templates"
+
+// Command-line flag for where to put the generated website.
 var outputDir string
 const outputDirFlag = "o"
 
+// Command-line flag for the directory containing project data.
 var projectDir string
 const projectDirFlag = "r"
 var defaultProjectDir = filepath.Join("/", "home", "gredelston", "dev", "gscsg", "src")
 
+// init sets up command-line flags.
 func init() {
 	flag.StringVar(&outputDir, outputDirFlag, "", "`Output directory` for the generated website")
 	flag.StringVar(&projectDir, projectDirFlag, "", "`Project path` containing sourcefiles used to generate website")
 	flag.Parse()
 }
 
+// fpExists is a convenience function to check whether a directory exists.
 func fpExists(fp string) bool {
 	_, err := os.Stat(fp)
 	return !os.IsNotExist(err)
 }
 
+// checkOutputDir verifies that outputDir is valid, and creates it if necessary.
 func checkOutputDir() {
 	// Ensure validity of output directory
 	if outputDir == "" {
@@ -49,11 +55,12 @@ func checkOutputDir() {
 	}
 }
 
+// checkProjectDir verifies that projectDir exists; or if none is provided, swaps in the default.
 func checkProjectDir() {
 	if !fpExists(projectDirFlag) {
 		projectDir = defaultProjectDir
 	}
-	for _, subdir := range []string{"templates"} {
+	for _, subdir := range []string{templatesDirName} {
 		if !fpExists(filepath.Join(projectDir, subdir)) {
 			panic(fmt.Errorf("project directory %s does not contain subdir %s", projectDir, subdir))
 		}
@@ -65,23 +72,7 @@ func main() {
 	checkProjectDir()
 
 	// Load hello.mustache and render with custom data
-	const basenameNoExt = "hello"
-	templateFP := filepath.Join(projectDir, "templates", fmt.Sprintf("%s.mustache", basenameNoExt))
-	contents, err := mustache.RenderFile(templateFP, map[string]string{"name": "Jill"})
-	if err != nil {
-		panic(err)
-	}
-
-	// Write rendered contents to output file
-	outputFP := filepath.Join(outputDir, fmt.Sprintf("%s.html", basenameNoExt))
-	err = os.Remove(outputFP)
-	if err != nil && !os.IsNotExist(err) {
-		panic(err)
-	}
-	f, err := os.Create(outputFP)
-	if err != nil {
-		panic(fmt.Errorf("creating file %s: %w", outputFP, err))
-	}
-	defer f.Close()
-	f.WriteString(contents)
+	templateFP := filepath.Join(projectDir, templatesDirName, "hello.mustache")
+	outputFP := filepath.Join(outputDir, "hello.html")
+	RenderTemplateToFile(templateFP, outputFP, map[string]string{"name": "Jill"})
 }
