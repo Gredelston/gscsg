@@ -5,13 +5,20 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+
+	"github.com/cbroglie/mustache"
 )
 
 var outputDir string
 const outputDirFlag = "o"
 
+var projectDir string
+const projectDirFlag = "r"
+var defaultProjectDir = filepath.Join("/", "home", "gredelston", "dev", "gscsg", "src")
+
 func init() {
 	flag.StringVar(&outputDir, outputDirFlag, "", "`Output directory` for the generated website")
+	flag.StringVar(&projectDir, projectDirFlag, "", "`Project path` containing sourcefiles used to generate website")
 	flag.Parse()
 }
 
@@ -20,7 +27,8 @@ func fpExists(fp string) bool {
 	return !os.IsNotExist(err)
 }
 
-func main() {
+func checkOutputDir() {
+	// Ensure validity of output directory
 	if outputDir == "" {
 		panic(fmt.Errorf("must supply an output directory with -%s", outputDirFlag))
 	}
@@ -39,17 +47,41 @@ func main() {
 			}
 		}
 	}
-	const fileBasename = "index.html"
-	fp := filepath.Join(outputDir, fileBasename)
-	err = os.Remove(fp)
+}
+
+func checkProjectDir() {
+	if !fpExists(projectDirFlag) {
+		projectDir = defaultProjectDir
+	}
+	for _, subdir := range []string{"templates"} {
+		if !fpExists(filepath.Join(projectDir, subdir)) {
+			panic(fmt.Errorf("project directory %s does not contain subdir %s", projectDir, subdir))
+		}
+	}
+}
+
+func main() {
+	checkOutputDir()
+	checkProjectDir()
+
+	// Load hello.mustache and render with custom data
+	const basenameNoExt = "hello"
+	templateFP := filepath.Join(projectDir, "templates", fmt.Sprintf("%s.mustache", basenameNoExt))
+	contents, err := mustache.RenderFile(templateFP, map[string]string{"name": "Jill"})
+	if err != nil {
+		panic(err)
+	}
+
+	// Write rendered contents to output file
+	outputFP := filepath.Join(outputDir, fmt.Sprintf("%s.html", basenameNoExt))
+	err = os.Remove(outputFP)
 	if err != nil && !os.IsNotExist(err) {
 		panic(err)
 	}
-	f, err := os.Create(fp)
+	f, err := os.Create(outputFP)
 	if err != nil {
-		panic(fmt.Errorf("creating file %s: %w", fp, err))
+		panic(fmt.Errorf("creating file %s: %w", outputFP, err))
 	}
 	defer f.Close()
-	const contents = "<html>\n\t<body>\n\t\tHello, world!\n\t</body>\n</html>"
 	f.WriteString(contents)
 }
