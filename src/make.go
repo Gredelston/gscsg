@@ -72,7 +72,9 @@ func main() {
 	checkProjectDir()
 
 	// Load hello.mustache and render with custom data
-	templateFP := filepath.Join(projectDir, templatesDirName, "hello.mustache")
-	outputFP := filepath.Join(outputDir, "hello.html")
-	RenderTemplateToFile(templateFP, outputFP, map[string]string{"name": "Jill"})
+	if err := RenderSite(projectDir, outputDir); err != nil {
+		panic(fmt.Errorf("failed to render site: %w", err))
+	} else {
+		fmt.Printf("Site written to %s\n", outputDir)
+	}
 }
